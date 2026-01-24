@@ -1,0 +1,162 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { CopilotClient } from '@github/copilot-sdk';
+import { readFile } from 'fs/promises';
+import path from 'path';
+
+// 1. CONFIGURACIÓN DEL AGENTE
+// Importante: Aumentamos el tiempo máximo de ejecución a 60 segundos
+export const maxDuration = 60; 
+export const dynamic = 'force-dynamic';
+
+// 2. CARGA DEL PROMPT (archivo Markdown cacheado)
+let QA_SYSTEM_PROMPT_CACHE: string | null = null;
+
+async function loadPrompt(): Promise<string> {
+  if (QA_SYSTEM_PROMPT_CACHE) return QA_SYSTEM_PROMPT_CACHE;
+  const p = path.join(process.cwd(), 'src', 'app', 'api', 'agent', 'prompts', 'qa-system-prompt.md');
+  QA_SYSTEM_PROMPT_CACHE = await readFile(p, 'utf8');
+  return QA_SYSTEM_PROMPT_CACHE;
+} 
+
+export async function POST(req: NextRequest) {
+  // Crear cliente para poder limpiarlo en caso de error
+  // Para desarrollo local, esto funciona directamente si tienes el CLI de Copilot instalado
+  const client = new CopilotClient({   
+    autoStart: true,
+  });
+
+  try {
+    const { url } = await req.json();
+
+    if (!url) {
+      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    }
+
+    // Validate URL
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Only http/https URLs are allowed');
+      }
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+    }
+
+    console.log(`🤖 Iniciando agente para: ${url}`);
+
+    // Use the parser module to fetch and extract page info
+    // This moves complex parsing out of this file and avoids mixing API logic with extraction logic.
+    const { fetchAndParse } = await import('@/lib/parser');
+
+    // Fetch a sample page to provide context
+    let pageInfo;
+    try {
+      pageInfo = await fetchAndParse(url);
+    } catch (e) {
+      pageInfo = { status: 0, html: '', title: undefined, description: undefined, links: [], forms: [], isDynamic: false };
+      console.warn('⚠️ Could not fetch page for context:', e);
+    }
+
+    const links = pageInfo.html ? pageInfo.links : [];
+    const forms = pageInfo.html ? pageInfo.forms : [];
+
+    // Include dynamic detection in context summary
+    // Metrics: increment isDynamic scan counter so we can decide later whether to enable MCP
+    if (pageInfo.isDynamic) {
+      try {
+        const { incrementMetric, getMetrics } = await import('@/lib/metrics');
+        incrementMetric('isDynamicScans');
+        const metrics = getMetrics();
+        console.log(`📊 metrics.isDynamicScans = ${metrics.isDynamicScans || 0}`);
+      } catch (e) {
+        console.warn('⚠️ Could not update metrics:', e);
+      }
+    }
+
+
+
+    // 3. INICIAR EL CLIENTE
+    await client.start();
+    console.log('✅ Cliente Copilot iniciado');
+
+    // Build a small context summary to include in the prompt
+    const contextSummary = `
+URL: ${url}
+Status: ${pageInfo.status}${pageInfo.isDynamic ? ' (dynamic detected)' : ''}
+Title: ${pageInfo.title || 'N/A'}
+Description: ${pageInfo.description || 'N/A'}
+Internal links (first ${Math.min(links.length, 10)}):\n${links.slice(0, 10).map(l => `- ${l}`).join('\n') || '- none'}
+Forms found: ${forms.length}
+${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.map((it)=>({name:it.name,type:it.type})))}`).join('\n')}
+`;
+
+    // 4. CREAR SESIÓN CON SYSTEM MESSAGE
+    // Modelo GPT-4.1 con streaming desactivado
+    const prompt = await loadPrompt();
+    const session = await client.createSession({
+      model: 'gpt-4.1',
+      streaming: false,
+      systemMessage: {
+        mode: 'replace',
+        content: prompt,
+      },
+    });
+    console.log(`✅ Sesión creada: ${session.sessionId}`);
+
+    // 5. ENVIAR MENSAJE Y ESPERAR RESPUESTA
+    const userPrompt = `Analyze this URL and generate the test suite. Use the CONTEXT below and produce: a short analysis, a TEST STRATEGY in markdown, 3 SMOKE TEST scenarios, and generate Page Object Model files and Playwright specs in code blocks using the exact output format defined above.\n\nCONTEXT:\n${contextSummary}\n\nPlease emit PROGRESS lines and **File:** blocks as specified in the OUTPUT FORMAT.`;
+
+    const response = await session.sendAndWait({ prompt: userPrompt });
+
+    console.log('✅ Análisis completado.');
+
+    const markdown = response?.data.content || 'No response received';
+
+    console.log('📝 Mensaje generado por Copilot.');
+
+    // Extract PROGRESS block if present
+    const progressMatch = markdown.match(/```PROGRESS\n([\s\S]*?)```/i);
+    const progressLines = progressMatch ? progressMatch[1].split('\n').map(l=>l.trim()).filter(Boolean) : [];
+
+    // Parse generated files and validate TypeScript (basic syntax check)
+    const { extractFilesFromMarkdown } = await import('@/lib/mdParser');
+    const { validateTypeScriptFiles } = await import('@/lib/validator');
+
+    const generatedFiles = extractFilesFromMarkdown(markdown);
+    const validation = validateTypeScriptFiles(generatedFiles);
+
+    // 6. LIMPIAR RECURSOS
+    await session.destroy();
+    await client.stop();
+
+    // 7. RESPUESTA
+    return NextResponse.json({ 
+      success: true, 
+      data: markdown,
+      progress: progressLines,
+      validation,
+      context: { title: pageInfo.title, description: pageInfo.description, linksCount: links.length, formsCount: forms.length, isDynamic: pageInfo.isDynamic },
+      stats: {
+        generatedFilesCount: generatedFiles.length,
+      }
+    });
+
+  } catch (error: unknown) {
+    console.error('❌ Error ejecutando el agente Copilot:', error);
+
+    // Intentar limpiar el cliente en caso de error
+    try {
+      await client.stop();
+    } catch {
+      // Ignorar errores al detener
+    }
+
+    // Manejo especial de errores
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json(
+      { error: message || 'Error interno del agente' },
+      { status: 500 }
+    );
+  }
+}

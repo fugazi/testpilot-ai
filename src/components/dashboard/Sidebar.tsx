@@ -1,0 +1,154 @@
+'use client';
+
+import React from 'react';
+import {
+  Home,
+  LogIn,
+  ShoppingCart,
+  Copy,
+  ChevronRight,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { useToast } from '@/components/providers/ToastProvider';
+
+interface SidebarProps {
+  filesCount?: number;
+  criticalFlows?: Array<{ name: string; icon: string }>;
+  techStack?: Array<{ name: string; icon: string }>;
+  installCommand?: string;
+  className?: string;
+}
+
+const defaultCriticalFlows = [
+  { name: 'Home', icon: 'home' },
+  { name: 'Login', icon: 'login' },
+  { name: 'Checkout', icon: 'cart' },
+];
+
+const defaultTechStack = [
+  { name: 'Playwright', icon: 'play' },
+  { name: 'TypeScript', icon: 'code' },
+];
+
+const getIcon = (icon: string) => {
+  const iconMap: Record<string, React.ReactNode> = {
+    home: <Home className="h-4 w-4" />,
+    login: <LogIn className="h-4 w-4" />,
+    cart: <ShoppingCart className="h-4 w-4" />,
+    play: (
+      <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center">
+        <ChevronRight className="h-3 w-3 text-primary-foreground" />
+      </div>
+    ),
+    code: (
+      <span className="text-xs font-mono text-primary">&lt;/&gt;</span>
+    ),
+  };
+  return iconMap[icon] || <Home className="h-4 w-4" />;
+};
+
+export function Sidebar({
+  filesCount = 5,
+  criticalFlows = defaultCriticalFlows,
+  techStack = defaultTechStack,
+  installCommand = 'npm init playwright@lat...',
+  className,
+}: SidebarProps) {
+  const [copied, setCopied] = React.useState(false);
+  const toast = useToast();
+
+  const handleCopy = async () => {
+    try {
+      const text = installCommand || 'npm init playwright@latest';
+      await navigator.clipboard.writeText(text);
+      toast.toast({ id: `copy-install-${Date.now()}`, title: 'Copied', message: 'Install command copied to clipboard.' });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy install command', err);
+      toast.toast({ id: `copy-install-err-${Date.now()}`, title: 'Copy failed', message: 'Could not copy install command.' });
+    }
+  };
+
+  return (
+    <aside
+      className={cn(
+        'w-64 shrink-0 border-r border-border bg-sidebar p-4 space-y-6',
+        className
+      )}
+    >
+      {/* Project Stats */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Project Stats
+        </h3>
+        <div className="flex items-center justify-between p-3 rounded-lg bg-card border border-border">
+          <span className="text-sm font-medium">Files Generated</span>
+          <Badge className="bg-primary text-primary-foreground">
+            {filesCount}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Critical Flows */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Critical Flows
+        </h3>
+        <ul className="space-y-1">
+          {criticalFlows.map((flow) => (
+            <li key={flow.name}>
+              <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground hover:bg-accent transition-colors">
+                <span className="text-muted-foreground">
+                  {getIcon(flow.icon)}
+                </span>
+                {flow.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Technology Stack */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Technology Stack
+        </h3>
+        <ul className="space-y-1">
+          {techStack.map((tech) => (
+            <li key={tech.name}>
+              <div className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-foreground bg-card border border-border">
+                <span className="text-muted-foreground">
+                  {getIcon(tech.icon)}
+                </span>
+                {tech.name}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Install Command */}
+      <div>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Install Command
+        </h3>
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-card border border-border">
+          <code className="flex-1 text-xs font-mono text-muted-foreground truncate">
+            {installCommand}
+          </code>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={handleCopy}
+          >
+            <Copy className={cn('h-3.5 w-3.5', copied && 'text-primary')} />
+          </Button>
+        </div>
+      </div>
+    </aside>
+  );
+}
