@@ -130,6 +130,7 @@ Check the current progress in our [Plan Phases](docs/plan-phases.md) document:
 
 ## 🏠 Developer
 * Name: `Douglas Urrea Ocampo`
+* Job: `SDET - Software Developer Engineer in Test`
 * Country: `Colombia`
 * City: `Medellin`
 * E-mail: `douglas@douglasfugazi.co`
