@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 <div align="center">
-  <img src="public/testpilot-ai-banner.jpg" alt="TestPilot.AI Banner" width="1200" />
+  <img src="./public/testpilot-ai-banner.jpg" alt="TestPilot.AI Banner" width="1200" />
   <h3>Automated Testing Platform powered by GitHub Copilot</h3>
   <p>Analyze web applications and generate comprehensive Playwright test suites in seconds.</p>
 </div>
