@@ -91,10 +91,10 @@ src/
    npm install -g @github/copilot
    ```
 
-4. Authenticate with GitHub:
+4. Authenticate with GitHub Copilot (Mandatory):
    *An active GitHub Copilot subscription is required to use the GitHub Copilot SDK.*
    ```bash
-   gh auth login
+   copilot auth login
    ```
 
 ### Running the Project
