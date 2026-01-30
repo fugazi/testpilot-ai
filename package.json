@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.1.19",
+    "@github/copilot-sdk": "^0.1.20",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "cheerio": "^1.2.0",
