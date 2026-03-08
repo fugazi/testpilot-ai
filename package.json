@@ -10,7 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@github/copilot-sdk": "^0.1.23",
+    "@github/copilot-sdk": "^0.1.32",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tabs": "^1.1.13",
     "cheerio": "^1.2.0",
@@ -22,21 +22,21 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
-    "react-syntax-highlighter": "^16.1.0",
+    "react-syntax-highlighter": "^16.1.1",
     "remark-gfm": "^4.0.1",
-    "tailwind-merge": "^3.4.0",
+    "tailwind-merge": "^3.5.0",
     "tsx": "^4.21.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^20.19.33",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^20.19.37",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/react-syntax-highlighter": "^15.5.13",
     "babel-plugin-react-compiler": "1.0.0",
-    "eslint": "^9.39.2",
+    "eslint": "^9.39.4",
     "eslint-config-next": "16.1.4",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"
