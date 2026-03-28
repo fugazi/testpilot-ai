@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CopilotClient } from '@github/copilot-sdk';
+import { CopilotClient, approveAll } from '@github/copilot-sdk';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
@@ -97,6 +97,7 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
     const session = await client.createSession({
       model: 'gpt-4.1',
       streaming: false,
+      onPermissionRequest: approveAll,
       systemMessage: {
         mode: 'replace',
         content: prompt,
