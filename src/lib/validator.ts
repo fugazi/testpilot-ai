@@ -33,7 +33,7 @@ export function validateTypeScriptFiles(files: CodeFile[]): ValidationResult[] {
     target: ts.ScriptTarget.ES2017,
     module: ts.ModuleKind.ESNext,
     jsx: ts.JsxEmit.Preserve,
-    moduleResolution: ts.ModuleResolutionKind.NodeJs,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
     esModuleInterop: true,
     skipLibCheck: true,
     allowJs: false,
