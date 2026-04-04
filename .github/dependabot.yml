@@ -1,0 +1,46 @@
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    groups:
+      dev-dependencies:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "typescript"
+          - "vitest"
+          - "tailwind*"
+          - "tw-animate-css"
+          - "babel-plugin-react-compiler"
+        update-types:
+          - minor
+          - patch
+      prod-dependencies:
+        patterns:
+          - "@github/*"
+          - "@radix-ui/*"
+          - "next"
+          - "react*"
+          - "cheerio"
+          - "class-variance-authority"
+          - "clsx"
+          - "jszip"
+          - "lucide-react"
+          - "react-markdown"
+          - "react-syntax-highlighter"
+          - "remark-gfm"
+          - "tailwind-merge"
+          - "tsx"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
