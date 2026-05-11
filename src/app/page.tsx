@@ -26,6 +26,7 @@ export default function Home() {
   const [statusMessage, setStatusMessage] = useState('');
   
   const progressSteps = React.useMemo(() => [
+    'Initializing TestPilot AI...',
     '🔍 Analyzing site structure...',
     '🍍 Identifying critical user flows and edge cases...',
     '⚙️ Generating test strategy and Playwright tests...',
@@ -38,20 +39,19 @@ export default function Home() {
 
   // Manage sequential status messages while loading
   React.useEffect(() => {
-    if (isLoading) {
-      setStatusMessage(progressSteps[0]);
-      statusIndexRef.current = 0;
-
-      intervalRef.current = window.setInterval(() => {
-        statusIndexRef.current = (statusIndexRef.current + 1) % progressSteps.length;
-        setStatusMessage(progressSteps[statusIndexRef.current]);
-      }, 4000);
-    } else {
+    if (!isLoading) {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      return;
     }
+
+    statusIndexRef.current = 0;
+    intervalRef.current = window.setInterval(() => {
+      statusIndexRef.current = (statusIndexRef.current + 1) % progressSteps.length;
+      setStatusMessage(progressSteps[statusIndexRef.current]);
+    }, 4000);
 
     return () => {
       if (intervalRef.current) {
@@ -102,11 +102,10 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setAgentResult(null);
-    setStatusMessage('Initializing TestPilot AI...');
+    statusIndexRef.current = 0;
+    setStatusMessage(progressSteps[statusIndexRef.current]);
 
     try {
-      setStatusMessage('Analyzing site structure...');
-      
       const response = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -118,7 +117,6 @@ export default function Home() {
         throw new Error(errorData.error || 'Analysis error.');
       }
 
-      setStatusMessage('Generating test strategy...');
       const data = await response.json();
       
       const result = parseAgentResponse(data.data);
