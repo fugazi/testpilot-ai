@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@github/copilot-sdk':
-        specifier: 1.0.1
-        version: 1.0.1
+        specifier: 1.0.4
+        version: 1.0.4
       '@radix-ui/react-slot':
         specifier: ^1.3.0
         version: 1.3.0(@types/react@19.2.17)(react@19.2.7)
@@ -30,8 +30,8 @@ importers:
         specifier: ^3.10.1
         version: 3.10.1
       lucide-react:
-        specifier: ^1.21.0
-        version: 1.21.0(react@19.2.7)
+        specifier: ^1.22.0
+        version: 1.22.0(react@19.2.7)
       next:
         specifier: 16.2.9
         version: 16.2.9(@babel/core@7.29.7)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -565,8 +565,8 @@ packages:
     libc: [musl]
     hasBin: true
 
-  '@github/copilot-sdk@1.0.1':
-    resolution: {integrity: sha512-w6AaS0WqqTE/3iyUrZznvgCLQhsUF7ZmEVCneacuHCfOzlH0r6ww9WUmyA0zgqmXO75V0IYrkIcnFke/qJkkDg==}
+  '@github/copilot-sdk@1.0.4':
+    resolution: {integrity: sha512-c6/gpatP7LAuP9stlc2uXXOrB+TJMFSs3Jrzu9FG8lJJYFGmdzbBvGz2UdL1jww84fp6D7cohEZa4UGq1+iuyA==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   '@github/copilot-win32-arm64@1.0.65':
@@ -2470,8 +2470,8 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@1.21.0:
-    resolution: {integrity: sha512-reEZMXq8Qdd5jg5XYkQ5TR1fB/GiQ7ih4vcrthYDtgjSDwh0i6/YLiGjsWsIwgN49gpAnd4J2elSNzncMEEUUQ==}
+  lucide-react@1.22.0:
+    resolution: {integrity: sha512-c9o3l0PiNcgOQDW4F31BEYHudE7kgxVt3o30qMl36ZPwTxXlGB4QnLilhERvVM4uh/pl5MDyY1/gzZSYcHDtBg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -3641,7 +3641,7 @@ snapshots:
   '@github/copilot-linuxmusl-x64@1.0.65':
     optional: true
 
-  '@github/copilot-sdk@1.0.1':
+  '@github/copilot-sdk@1.0.4':
     dependencies:
       '@github/copilot': 1.0.65
       vscode-jsonrpc: 8.2.1
@@ -5580,7 +5580,7 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@1.21.0(react@19.2.7):
+  lucide-react@1.22.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 
