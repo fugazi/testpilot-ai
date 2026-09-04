@@ -1,14 +1,16 @@
 'use client';
 
 import React from 'react';
-import { CheckCircle2, Download, Share2, Settings } from 'lucide-react';
+import { CheckCircle2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface HeaderBarProps {
   domainUrl?: string;
-  pagesProcessed?: number;
-  flowsIdentified?: number;
+  /** Pages discovered while crawling the target site */
+  pagesDiscovered?: number;
+  /** Generated files (POMs + specs + config) */
+  filesGenerated?: number;
   onDownload?: () => Promise<void> | void;
   className?: string;
 }
@@ -17,9 +19,9 @@ interface HeaderBarProps {
  * Reusable header bar used across strategy and code views.
  */
 export function HeaderBar({
-  domainUrl = 'dashboard.testpilot.ai',
-  pagesProcessed = 0,
-  flowsIdentified = 0,
+  domainUrl = '—',
+  pagesDiscovered = 0,
+  filesGenerated = 0,
   onDownload,
   className,
 }: HeaderBarProps) {
@@ -32,7 +34,9 @@ export function HeaderBar({
         </div>
         <div className="flex flex-col">
           <span className="text-lg font-semibold text-foreground">{domainUrl}</span>
-          <span className="text-xs text-muted-foreground">Processed {pagesProcessed} pages and identified {flowsIdentified} critical user flows.</span>
+          <span className="text-xs text-muted-foreground">
+            Discovered {pagesDiscovered} internal pages and generated {filesGenerated} test artifacts.
+          </span>
         </div>
       </div>
 
@@ -40,12 +44,6 @@ export function HeaderBar({
         <Button variant="outline" size="sm" className="gap-2" onClick={() => onDownload && onDownload()}>
           <Download className="h-4 w-4" />
           Download ZIP
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Share2 className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings className="h-4 w-4" />
         </Button>
       </div>
     </div>

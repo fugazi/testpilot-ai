@@ -5,7 +5,7 @@ import { POST, GET } from './route';
 const makeCtx = (segments: string[]) => ({ params: Promise.resolve({ path: segments }) });
 
 function makeRequest(path: string, init?: RequestInit) {
-  return new NextRequest(`http://localhost/api/provider-proxy/${path}`, init);
+  return new NextRequest(`http://localhost/api/provider-proxy/${path}`, init as ConstructorParameters<typeof NextRequest>[1]);
 }
 
 afterEach(() => {
@@ -17,7 +17,7 @@ afterEach(() => {
 describe('provider-proxy', () => {
   it('forwards allowed paths and strips non-standard params', async () => {
     process.env.NVIDIA_API_KEY = 'test-key';
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_target: RequestInfo | URL, _init?: RequestInit) =>
       new Response(JSON.stringify({ ok: true }), {
         status: 200,
         headers: { 'content-type': 'application/json' },
@@ -36,7 +36,7 @@ describe('provider-proxy', () => {
     expect(res.status).toBe(200);
     const [target, init] = fetchMock.mock.calls[0];
     expect(String(target)).toBe('https://integrate.api.nvidia.com/v1/chat/completions');
-    const forwarded = JSON.parse(String(init.body));
+    const forwarded = JSON.parse(String(init?.body));
     expect(forwarded.model).toBe('m');
     expect(forwarded.temperature).toBe(0.5);
     expect('snippy' in forwarded).toBe(false);
@@ -87,7 +87,7 @@ describe('provider-proxy', () => {
 
   it('forwards GET /models without a body', async () => {
     process.env.NVIDIA_API_KEY = 'test-key';
-    const fetchMock = vi.fn(async () =>
+    const fetchMock = vi.fn(async (_target: RequestInfo | URL, _init?: RequestInit) =>
       new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }),
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -101,6 +101,6 @@ describe('provider-proxy', () => {
     expect(res.status).toBe(200);
     const [target, init] = fetchMock.mock.calls[0];
     expect(String(target)).toBe('https://integrate.api.nvidia.com/v1/models');
-    expect(init.body).toBeUndefined();
+    expect(init?.body).toBeUndefined();
   });
 });
