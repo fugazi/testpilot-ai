@@ -17,11 +17,12 @@ afterEach(() => {
 describe('provider-proxy', () => {
   it('forwards allowed paths and strips non-standard params', async () => {
     process.env.NVIDIA_API_KEY = 'test-key';
-    const fetchMock = vi.fn(async (_target: RequestInfo | URL, _init?: RequestInit) =>
-      new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { 'content-type': 'application/json' },
-      }),
+    const fetchMock = vi.fn<(target: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -87,8 +88,8 @@ describe('provider-proxy', () => {
 
   it('forwards GET /models without a body', async () => {
     process.env.NVIDIA_API_KEY = 'test-key';
-    const fetchMock = vi.fn(async (_target: RequestInfo | URL, _init?: RequestInit) =>
-      new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }),
+    const fetchMock = vi.fn<(target: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async () => new Response('[]', { status: 200, headers: { 'content-type': 'application/json' } }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
