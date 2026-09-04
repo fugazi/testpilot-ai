@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 docs/
+
+# runtime artifacts
+.metrics.json
+.playwright-mcp/
