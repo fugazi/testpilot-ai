@@ -139,7 +139,7 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
     // El runtime de Copilot envía parámetros propietarios (p.ej. "snippy") que
     // NVIDIA rechaza con 400; enrutamos el proveedor por nuestro proxy
     // limpiador (/api/provider-proxy), que reenvía a NVIDIA_BASE_URL.
-    const providerBaseUrl = `${req.nextUrl.origin}/api/provider-proxy`;
+    const providerBaseUrl = new URL('/api/provider-proxy', process.env.APP_ORIGIN || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : req.nextUrl.origin)).toString();
 
     const session = await client.createSession({
       model: nvidiaApiKey ? nvidiaModel : 'gpt-4.1',
