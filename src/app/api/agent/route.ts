@@ -133,7 +133,6 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
     const prompt = await loadPrompt();
 
     const nvidiaApiKey = process.env.NVIDIA_API_KEY;
-    const nvidiaBaseUrl = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
     const nvidiaModel = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b';
 
     // El runtime de Copilot envía parámetros propietarios (p.ej. "snippy") que
