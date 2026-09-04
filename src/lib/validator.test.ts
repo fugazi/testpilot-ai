@@ -3,9 +3,9 @@ import { validateTypeScriptFiles } from './validator';
 
 import type { CodeFile } from './mdParser';
 
-const good: CodeFile[] = [{ filename: 'good.ts', content: 'export const x: number = 1;' }];
-const badSyntax: CodeFile[] = [{ filename: 'bad.ts', content: 'export const x: number = ;' }];
-const badType: CodeFile[] = [{ filename: 'badtype.ts', content: 'export const y: string = 1;' }];
+const good: CodeFile[] = [{ filename: 'good.ts', language: 'typescript', content: 'export const x: number = 1;' }];
+const badSyntax: CodeFile[] = [{ filename: 'bad.ts', language: 'typescript', content: 'export const x: number = ;' }];
+const badType: CodeFile[] = [{ filename: 'badtype.ts', language: 'typescript', content: 'export const y: string = 1;' }];
 
 describe('validator', () => {
   it('validates good files', () => {

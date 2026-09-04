@@ -21,9 +21,7 @@ async function loadPrompt(): Promise<string> {
 export async function POST(req: NextRequest) {
   // Crear cliente para poder limpiarlo en caso de error
   // Para desarrollo local, esto funciona directamente si tienes el CLI de Copilot instalado
-  const client = new CopilotClient({   
-    autoStart: true,
-  });
+  const client = new CopilotClient();
 
   try {
     const { url } = await req.json();
@@ -92,18 +90,34 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
 `;
 
     // 4. CREAR SESIÓN CON SYSTEM MESSAGE
-    // Modelo GPT-4.1 con streaming desactivado
+    // Modelo GPT-4.1 por defecto. Si existe NVIDIA_API_KEY, se usa BYOK
+    // (Bring Your Own Key) contra NVIDIA NIM, una API compatible con OpenAI.
     const prompt = await loadPrompt();
+
+    const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+    const nvidiaBaseUrl = process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1';
+    const nvidiaModel = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b';
+
     const session = await client.createSession({
-      model: 'gpt-4.1',
+      model: nvidiaApiKey ? nvidiaModel : 'gpt-4.1',
       streaming: false,
       onPermissionRequest: approveAll,
       systemMessage: {
         mode: 'replace',
         content: prompt,
       },
+      ...(nvidiaApiKey
+        ? {
+            provider: {
+              type: 'openai' as const,
+              baseUrl: nvidiaBaseUrl,
+              apiKey: nvidiaApiKey,
+              modelId: nvidiaModel,
+            },
+          }
+        : {}),
     });
-    console.log(`✅ Sesión creada: ${session.sessionId}`);
+    console.log(`✅ Sesión creada: ${session.sessionId} (modelo: ${nvidiaApiKey ? nvidiaModel : 'gpt-4.1'})`);
 
     // 5. ENVIAR MENSAJE Y ESPERAR RESPUESTA
     const userPrompt = `Analyze this URL and generate the test suite. Use the CONTEXT below and produce: a short analysis, a TEST STRATEGY in markdown, 3 SMOKE TEST scenarios, and generate Page Object Model files and Playwright specs in code blocks using the exact output format defined above.\n\nCONTEXT:\n${contextSummary}\n\nPlease emit PROGRESS lines and **File:** blocks as specified in the OUTPUT FORMAT.`;
@@ -128,7 +142,8 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
     const validation = validateTypeScriptFiles(generatedFiles);
 
     // 6. LIMPIAR RECURSOS
-    await session.destroy();
+    // En SDK >= 1.0.11 la sesión se destruye vía el cliente (deleteSession)
+    await client.deleteSession(session.sessionId);
     await client.stop();
 
     // 7. RESPUESTA
