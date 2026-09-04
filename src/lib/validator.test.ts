@@ -27,4 +27,22 @@ describe('validator', () => {
     // The message should reference 'Type' or 'Type' mismatch
     expect(r[0].errors.join('\n')).toMatch(/Type 'number'|Type '1'|Type 'string'|is not assignable/);
   });
+
+  it('skips validation with a note beyond the per-call file cap', () => {
+    const many: CodeFile[] = Array.from({ length: 25 }, (_, i) => ({
+      filename: `f${i}.ts`,
+      language: 'typescript',
+      content: 'export const a = 1;',
+    }));
+    const r = validateTypeScriptFiles(many);
+    expect(r.length).toBe(25);
+    expect(r[19].errors.length).toBe(0);
+    expect(r[20].errors.join('\n')).toMatch(/skipped/);
+  });
+
+  it('is safe to call repeatedly (cached libs)', () => {
+    const first = validateTypeScriptFiles(good);
+    const second = validateTypeScriptFiles(good);
+    expect(second).toEqual(first);
+  });
 });
