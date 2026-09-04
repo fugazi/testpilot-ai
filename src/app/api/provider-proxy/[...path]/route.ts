@@ -24,7 +24,7 @@ async function handler(
     const upstreamBase = (
       process.env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1'
     ).replace(/\/$/, '');
-    const target = `${upstreamBase}/${segments.join('/')}`;
+    const target = `${upstreamBase}/${segments.join('/')}${req.nextUrl.search}`;
 
     let body: unknown;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
