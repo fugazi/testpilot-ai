@@ -34,13 +34,14 @@ copilot auth login
 
 ### Agent Flow (Core Pipeline)
 
-1. **User Input** → Frontend sends URL to `POST /api/agent`
-2. **Page Fetching** → `src/lib/parser.ts` fetches and parses HTML using Cheerio
-3. **Context Building** → Extracts title, description, links, forms, and detects dynamic pages
-4. **AI Generation** → GitHub Copilot SDK (using GPT-4.1) processes context with `qa-system-prompt.md`
-5. **Response Parsing** → `src/lib/mdParser.ts` extracts code blocks from markdown
-6. **Validation** → `src/lib/validator.ts` validates TypeScript using Compiler API
-7. **Results Display** → Frontend renders strategy and code with ZIP export
+1. **User Input** → Frontend sends URL to `POST /api/agent` (rate limited per IP)
+2. **URL Validation** → `assertPublicHttpUrl()` rejects SSRF targets (private/loopback IPs) before any work
+3. **Page Fetching** → `src/lib/parser.ts` fetches (timeout + 2MB cap, validated redirects) and parses HTML using Cheerio
+4. **Context Building** → Extracts title, description, links, forms, and detects dynamic pages
+5. **AI Generation** → GitHub Copilot SDK (using GPT-4.1) processes context with `qa-system-prompt.md`
+6. **Response Parsing** → `src/lib/mdParser.ts` `parseAgentResponse()` extracts summary, files and progress from markdown
+7. **Validation** → `src/lib/validator.ts` validates TypeScript using Compiler API
+8. **Results Display** → Frontend renders the server-parsed strategy and code with ZIP export
 
 ### Key Modules
 
@@ -51,18 +52,28 @@ copilot auth login
 - Returns structured JSON with data, progress, validation, and context
 
 **Parser (`src/lib/parser.ts`)**
-- `fetchAndParse(url)`: Fetches URL and returns PageInfo
+- `fetchAndParse(url)`: Fetches URL (10s timeout, 2MB cap, `res.ok` check) and returns PageInfo
+- `assertPublicHttpUrl(url)`: SSRF guard — blocks private/loopback/link-local targets (IP literals and DNS), used by the API route before starting any session
 - `parseHtml(html, baseUrl)`: Extracts metadata, same-origin links, forms, and detects dynamic pages
 - Dynamic detection heuristic: checks for `__NEXT_DATA__`, script count > 6, or minimal content
 
+**Rate Limiter (`src/lib/rateLimit.ts`)**
+- `checkRateLimit(key)`: In-memory sliding window per IP for `/api/agent`
+- Configurable via `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` (defaults: 10 req / 15 min)
+- Per-process state only (documented in the module)
+
 **Markdown Parser (`src/lib/mdParser.ts`)**
+- `parseAgentResponse(markdown)`: Single parser (used by API and client) returning `{ summary, files, progress }`
 - `extractFilesFromMarkdown(markdown)`: Extracts code blocks with `**File:**` markers
+- `###` headings only count as files when they look like paths (extension required)
 - Supports TypeScript, JavaScript, and JSON files
 - Returns `CodeFile[]` with filename, language, and content
 
 **Validator (`src/lib/validator.ts`)**
 - `validateTypeScriptFiles(files)`: Uses TypeScript Compiler API for syntax/type checking
 - Creates virtual file system for in-memory validation
+- Caches TS lib SourceFiles across calls (runs inline in the request)
+- Caps at 20 files per call; excess files are reported as skipped
 - Returns `ValidationResult[]` grouped by file
 
 **Metrics (`src/lib/metrics.ts`)**
@@ -105,9 +116,10 @@ src/
 │   ├── providers/            # ToastProvider context
 │   └── ui/                   # shadcn/ui primitives
 └── lib/
-    ├── parser.ts             # HTML parsing (Cheerio)
-    ├── mdParser.ts           # Markdown code block extraction
+    ├── parser.ts             # HTML parsing (Cheerio) + SSRF-safe fetching
+    ├── mdParser.ts           # Agent response parsing (summary/files/progress)
     ├── validator.ts          # TypeScript Compiler API validation
+    ├── rateLimit.ts          # In-memory sliding-window rate limiter
     ├── metrics.ts            # In-memory metrics
     └── utils.ts              # cn() utility
 ```
@@ -143,7 +155,7 @@ The AI prompt (`src/app/api/agent/prompts/qa-system-prompt.md`) expects:
    ```
    ```
 
-The frontend `parseAgentResponse()` extracts both and returns `{ summary, files, progress }`.
+The frontend consumes the server-parsed response: the API route returns `summary`, `files`, `progress` and `validation` extracted by `src/lib/mdParser.ts` — there is no client-side markdown re-parsing.
 
 ## Testing
 
@@ -155,11 +167,14 @@ The frontend `parseAgentResponse()` extracts both and returns `{ summary, files,
 
 ## Special Considerations
 
-1. **Timeout**: API route has `maxDuration = 60` for Copilot processing
-2. **Dynamic Detection**: Metrics track `isDynamicScans` for future MCP integration
-3. **Validation**: All generated TypeScript is validated before returning to client
-4. **Error Handling**: CopilotClient cleanup in finally blocks
-5. **Spanish Comments**: Some files have Spanish comments (preserve existing patterns)
+1. **Timeout**: API route has `maxDuration = 300`; the agent wait is capped at `maxDuration - 30s` (default `AGENT_TIMEOUT_MS=270000`) to leave cleanup headroom
+2. **SSRF**: User URLs are validated against private networks in `assertPublicHttpUrl()` — never fetch user URLs without it
+3. **Provider proxy**: `/api/provider-proxy` only allows `chat/completions` and `models`, requires the bearer token to match `NVIDIA_API_KEY`, and filters request params with an allowlist
+4. **Rate limiting**: `/api/agent` is rate limited per IP (in-memory; see `src/lib/rateLimit.ts`)
+5. **Dynamic Detection**: Metrics track `isDynamicScans` for future MCP integration
+6. **Validation**: All generated TypeScript is validated before returning to client
+7. **Error Handling**: CopilotClient session cleanup (`deleteSession` + `stop`) runs in `finally`
+8. **Spanish Comments**: Some files have Spanish comments (preserve existing patterns)
 
 ## Roadmap Phases
 
