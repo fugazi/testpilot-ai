@@ -25,12 +25,11 @@ import { useToast } from "@/components/providers/ToastProvider";
 
 /**
  * Code file representation used by the viewer.
+ * Canonical type lives in mdParser (shared with the API route).
  */
-export interface CodeFile {
-  filename: string;
-  language: string;
-  content: string;
-}
+import type { CodeFile } from '@/lib/mdParser';
+
+export type { CodeFile };
 
 /**
  * Node type for the file explorer tree.

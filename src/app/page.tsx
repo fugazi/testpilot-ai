@@ -10,12 +10,33 @@ import { HeaderBar } from '@/components/dashboard/HeaderBar';
 import JSZip from 'jszip';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CodeViewer, CodeFile } from '@/components/dashboard';
+import type { ValidationResult } from '@/lib/validator';
 
-// Response structure
+/** Response structure returned by POST /api/agent */
+interface AgentResponse {
+  success: boolean;
+  data: string;
+  summary: string;
+  files: CodeFile[];
+  progress: string[];
+  validation: ValidationResult[];
+  context: {
+    title?: string;
+    description?: string;
+    linksCount: number;
+    formsCount: number;
+    isDynamic: boolean;
+  };
+  stats: { generatedFilesCount: number };
+}
+
+/** What the dashboard needs to render results */
 interface AgentResult {
   summary: string;
   files: CodeFile[];
   progress?: string[];
+  validation?: ValidationResult[];
+  context?: AgentResponse['context'];
 }
 
 export default function Home() {
@@ -24,7 +45,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [agentResult, setAgentResult] = useState<AgentResult | null>(null);
   const [statusMessage, setStatusMessage] = useState('');
-  
+
   const progressSteps = React.useMemo(() => [
     'Initializing TestPilot AI...',
     '🔍 Analyzing site structure...',
@@ -33,7 +54,7 @@ export default function Home() {
     '📦 Building Page Object Models and test specs...',
     '✅ Analysis completed successfully.'
   ], []);
-  
+
   const statusIndexRef = React.useRef(0);
   const intervalRef = React.useRef<number | null>(null);
 
@@ -87,11 +108,12 @@ export default function Home() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(urlBlob);
 
       toast.toast({ id: `zip-${Date.now()}`, title: 'Download ready', message: 'The ZIP package has been downloaded.' });
     } catch (e) {
       console.error(e);
-      toast.toast({ id: `zip-err-${Date.now()}`, title: 'Download failed', message: 'Could not create ZIP.' });
+      toast.toast({ id: `zip-err-${Date.now()}`, title: 'Download failed', variant: 'error', message: 'Could not create ZIP.' });
     }
   }, [agentResult, toast]);
 
@@ -113,29 +135,40 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Analysis error.');
+        let message = `Analysis failed (HTTP ${response.status}).`;
+        try {
+          const errorData = await response.json();
+          if (errorData?.error) message = errorData.error;
+        } catch {
+          // Respuesta no-JSON (p.ej. HTML de un proxy/gateway): usar el mensaje por defecto
+        }
+        throw new Error(message);
       }
 
-      const data = await response.json();
-      
-      const result = parseAgentResponse(data.data);
-      const resultWithProgress: AgentResult = { ...result, progress: data.progress || [] };
-      setAgentResult(resultWithProgress);
-      toast.toast({ 
-        id: `done-${Date.now()}`, 
-        title: 'Analysis complete', 
-        message: 'Test strategy and files generated.' 
+      const data: AgentResponse = await response.json();
+
+      setAgentResult({
+        summary: data.summary || '',
+        files: data.files || [],
+        progress: data.progress || [],
+        validation: data.validation || [],
+        context: data.context,
+      });
+      toast.toast({
+        id: `done-${Date.now()}`,
+        title: 'Analysis complete',
+        message: 'Test strategy and files generated.'
       });
 
     } catch (err: unknown) {
       console.error(err);
       const message = err instanceof Error ? err.message : String(err);
       setError(message || 'An unexpected error occurred. Try with a simpler URL.');
-      toast.toast({ 
-        id: `err-${Date.now()}`, 
-        title: 'Error', 
-        message: message || 'Unexpected error' 
+      toast.toast({
+        id: `err-${Date.now()}`,
+        title: 'Error',
+        variant: 'error',
+        message: message || 'Unexpected error'
       });
     } finally {
       setIsLoading(false);
@@ -156,7 +189,7 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
+
       <main className="flex-1">
         {/* Hero Section - Always visible */}
         <HeroSection
@@ -196,7 +229,7 @@ export default function Home() {
           <section className="container mx-auto px-4 md:px-6 pb-16 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className="flex gap-6">
               {/* Sidebar */}
-              <Sidebar 
+              <Sidebar
                 filesCount={agentResult.files.length}
                 className="hidden lg:block"
               />
@@ -216,11 +249,12 @@ export default function Home() {
                   </TabsList>
 
                   <TabsContent value="strategy">
-                    <StrategyView 
+                    <StrategyView
                       domainUrl={getDomainFromUrl(url)}
-                      pagesProcessed={agentResult.files.length * 3}
-                      flowsIdentified={agentResult.files.length}
-                      coveragePercentage={84}
+                      pagesDiscovered={agentResult.context?.linksCount ?? 0}
+                      files={agentResult.files}
+                      validation={agentResult.validation ?? []}
+                      summary={agentResult.summary}
                       onDownload={handleDownload}
                     />
                   </TabsContent>
@@ -228,8 +262,8 @@ export default function Home() {
                   <TabsContent value="code">
                     <HeaderBar
                       domainUrl={getDomainFromUrl(url)}
-                      pagesProcessed={agentResult.files.length * 3}
-                      flowsIdentified={agentResult.files.length}
+                      pagesDiscovered={agentResult.context?.linksCount ?? 0}
+                      filesGenerated={agentResult.files.length}
                       onDownload={handleDownload}
                     />
 
@@ -247,54 +281,4 @@ export default function Home() {
       <Footer />
     </div>
   );
-}
-
-// --- PARSER HELPER ---
-function parseAgentResponse(markdownText: string): { summary: string; files: CodeFile[]; progress?: string[] } {
-  const files: CodeFile[] = [];
-
-  // Extract PROGRESS block (if present) and remove it from the markdown
-  const progressMatch = markdownText.match(/```PROGRESS\n([\s\S]*?)```/i);
-  const progressLines = progressMatch ? progressMatch[1].split('\n').map(l => l.trim()).filter(Boolean) : [];
-
-  // Remove PROGRESS block before further parsing
-  const cleanedMarkdown = markdownText.replace(/```PROGRESS[\s\S]*?```/gi, '').trim();
-
-  // Improved regex to capture code blocks with file names
-  const fileRegex = /(?:\*\*File:\s*|File:\s*|###\s*)([\w./-]+)(?:\*\*|\n)\s*```(?:typescript|javascript|json|ts)?\n([\s\S]*?)```/gi;
-
-  let match;
-  let cleanSummary = cleanedMarkdown;
-
-  while ((match = fileRegex.exec(cleanedMarkdown)) !== null) {
-    const fullMatch = match[0];
-    const filename = match[1].trim();
-    const content = match[2].trim();
-
-    let language = 'typescript';
-    if (filename.endsWith('.json')) language = 'json';
-    if (filename.endsWith('.js')) language = 'javascript';
-
-    files.push({ filename, language, content });
-    cleanSummary = cleanSummary.replace(fullMatch, '');
-  }
-
-  // Fallback for generic code blocks
-  if (files.length === 0) {
-    const genericCode = cleanedMarkdown.match(/```(?:typescript|ts)?\n([\s\S]*?)```/);
-    if (genericCode) {
-      files.push({
-        filename: 'generated.spec.ts',
-        language: 'typescript',
-        content: genericCode[1].trim()
-      });
-      cleanSummary = cleanSummary.replace(genericCode[0], '');
-    }
-  }
-
-  return {
-    summary: cleanSummary.trim(),
-    files,
-    progress: progressLines.length > 0 ? progressLines : undefined
-  };
 }

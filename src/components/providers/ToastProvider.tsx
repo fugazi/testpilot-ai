@@ -1,12 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
+
+type ToastVariant = 'success' | 'error';
 
 type Toast = {
   id: string;
   title?: string;
   message: string;
+  variant?: ToastVariant;
   duration?: number;
 };
 
@@ -51,13 +54,25 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             className="pointer-events-auto rounded-lg bg-white border shadow-md p-3 flex gap-3 items-start animate-in slide-in-from-right duration-300"
             role="status"
           >
-            <div className="text-green-600 mt-0.5"><CheckCircle2 className="w-5 h-5" /></div>
+            <div className={t.variant === 'error' ? 'text-red-600 mt-0.5' : 'text-green-600 mt-0.5'}>
+              {t.variant === 'error' ? (
+                <AlertCircle className="w-5 h-5" />
+              ) : (
+                <CheckCircle2 className="w-5 h-5" />
+              )}
+            </div>
             <div className="flex-1">
               {t.title && <div className="font-medium text-sm">{t.title}</div>}
               <div className="text-sm text-gray-700 mt-1">{t.message}</div>
             </div>
             <div className="ml-3 flex items-center">
-              <button className="text-sm text-gray-400 hover:text-gray-700" onClick={() => remove(t.id)}>Close</button>
+              <button
+                className="text-sm text-gray-400 hover:text-gray-700"
+                onClick={() => remove(t.id)}
+                aria-label="Close notification"
+              >
+                Close
+              </button>
             </div>
           </div>
         ))}

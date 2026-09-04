@@ -10,6 +10,19 @@ import path from 'path';
 export interface ValidationResult { filename: string; errors: string[] }
 
 /**
+ * Cap on validated files per call: tsc runs inline in the request, so a
+ * runaway generation cannot pin the event loop for too long.
+ */
+const MAX_FILES_PER_CALL = 20;
+
+/**
+ * Cache of TypeScript lib SourceFiles (everything not in the virtual map).
+ * They are identical for the process lifetime, and re-parsing the whole
+ * lib.es*.d.ts chain on every request was the dominant cost.
+ */
+const libSourceCache = new Map<string, ts.SourceFile>();
+
+/**
  * Validate a set of code files using the TypeScript Compiler API.
  *
  * This performs both syntax and type checking and returns diagnostics grouped by file.
@@ -18,8 +31,10 @@ export interface ValidationResult { filename: string; errors: string[] }
  */
 export function validateTypeScriptFiles(files: CodeFile[]): ValidationResult[] {
   const results: ValidationResult[] = [];
-  const tsFiles = files.filter(f => f.filename.endsWith('.ts') || f.filename.endsWith('.tsx'));
-  if (tsFiles.length === 0) return results;
+  const allTsFiles = files.filter(f => f.filename.endsWith('.ts') || f.filename.endsWith('.tsx'));
+  if (allTsFiles.length === 0) return results;
+
+  const tsFiles = allTsFiles.slice(0, MAX_FILES_PER_CALL);
 
   // Create a virtual file map with stable absolute-like paths
   const fileMap = new Map<string, string>();
@@ -47,7 +62,11 @@ export function validateTypeScriptFiles(files: CodeFile[]): ValidationResult[] {
     if (fileMap.has(fileName)) {
       return ts.createSourceFile(fileName, fileMap.get(fileName)!, languageVersion, true);
     }
-    return originalGetSourceFile.call(host, fileName, languageVersion, onError);
+    const cached = libSourceCache.get(fileName);
+    if (cached) return cached;
+    const source = originalGetSourceFile.call(host, fileName, languageVersion, onError);
+    if (source) libSourceCache.set(fileName, source);
+    return source;
   };
 
   const originalFileExists = host.fileExists;
@@ -85,6 +104,11 @@ export function validateTypeScriptFiles(files: CodeFile[]): ValidationResult[] {
     const virtualName = path.posix.join('/virtual', f.filename.replace(/\\\\/g, '/'));
     const errors = byFile.get(virtualName) || [];
     results.push({ filename: f.filename, errors });
+  });
+
+  // Files beyond the per-call cap are reported as skipped, not silently ignored
+  allTsFiles.slice(MAX_FILES_PER_CALL).forEach(f => {
+    results.push({ filename: f.filename, errors: ['Validation skipped: too many files in one generation (limit 20)'] });
   });
 
   // If there are global diagnostics (no file), attach them to the first file as a fallback

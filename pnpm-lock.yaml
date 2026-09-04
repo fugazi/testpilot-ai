@@ -56,9 +56,6 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
-      tsx:
-        specifier: ^4.23.13
-        version: 4.23.13
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4.3.3
@@ -87,6 +84,9 @@ importers:
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
+      tsx:
+        specifier: ^4.23.13
+        version: 4.23.13
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0

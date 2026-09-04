@@ -32,7 +32,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {/* ToastProvider adds lightweight toasts for user feedback */}
-        <script dangerouslySetInnerHTML={{__html: `/** tailwind prefers body classes for dark */`}} />
         <ToastProvider>
           {children}
         </ToastProvider>
