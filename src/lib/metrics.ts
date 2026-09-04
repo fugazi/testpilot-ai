@@ -1,4 +1,5 @@
-import { writeFileSync, existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 
 type Metrics = { [k: string]: number };
@@ -18,13 +19,12 @@ try {
 
 export function incrementMetric(name: string, amount = 1) {
   metrics[name] = (metrics[name] || 0) + amount;
-  // Persist only when explicitly enabled to avoid noise in test environments
+  // Persist only when explicitly enabled to avoid noise in test environments.
+  // Async write so the request path never blocks the event loop.
   if (process.env.METRICS_PERSIST === '1') {
-    try {
-      writeFileSync(METRICS_FILE, JSON.stringify(metrics, null, 2), 'utf8');
-    } catch {
+    writeFile(METRICS_FILE, JSON.stringify(metrics, null, 2), 'utf8').catch(() => {
       // ignore
-    }
+    });
   }
 }
 
