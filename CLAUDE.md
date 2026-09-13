@@ -38,7 +38,7 @@ copilot auth login
 2. **URL Validation** → `assertPublicHttpUrl()` rejects SSRF targets (private/loopback IPs) before any work
 3. **Page Fetching** → `src/lib/parser.ts` fetches (timeout + 2MB cap, validated redirects) and parses HTML using Cheerio
 4. **Context Building** → Extracts title, description, links, forms, and detects dynamic pages
-5. **AI Generation** → GitHub Copilot SDK (using GPT-4.1) processes context with `qa-system-prompt.md`
+5. **AI Generation** → GitHub Copilot SDK (model `auto` by default; `COPILOT_MODEL` to pin one) processes context with `qa-system-prompt.md`
 6. **Response Parsing** → `src/lib/mdParser.ts` `parseAgentResponse()` extracts summary, files and progress from markdown
 7. **Validation** → `src/lib/validator.ts` validates TypeScript using Compiler API
 8. **Results Display** → Frontend renders the server-parsed strategy and code with ZIP export
@@ -169,8 +169,7 @@ The frontend consumes the server-parsed response: the API route returns `summary
 
 1. **Timeout**: API route has `maxDuration = 300`; the agent wait is capped at `maxDuration - 30s` (default `AGENT_TIMEOUT_MS=270000`) to leave cleanup headroom
 2. **SSRF**: User URLs are validated against private networks in `assertPublicHttpUrl()` — never fetch user URLs without it
-3. **Provider proxy**: `/api/provider-proxy` only allows `chat/completions` and `models`, requires the bearer token to match `NVIDIA_API_KEY`, and filters request params with an allowlist
-4. **Rate limiting**: `/api/agent` is rate limited per IP (in-memory; see `src/lib/rateLimit.ts`)
+
 5. **Dynamic Detection**: Metrics track `isDynamicScans` for future MCP integration
 6. **Validation**: All generated TypeScript is validated before returning to client
 7. **Error Handling**: CopilotClient session cleanup (`deleteSession` + `stop`) runs in `finally`

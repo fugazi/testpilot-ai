@@ -10,9 +10,9 @@ import { validateTypeScriptFiles } from '@/lib/validator';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 // 1. CONFIGURACIÓN DEL AGENTE
-// Los modelos de reasoning (p.ej. Nemotron en NVIDIA NIM) pueden tardar
-// varios minutos; 300s es el techo de la plataforma y el timeout del
-// agente se deja 30s por debajo para dar margen a la limpieza.
+// La generación de artefactos con el agente puede tardar varios minutos;
+// 300s es el techo de la plataforma y el timeout del agente se deja 30s por
+// debajo para dar margen a la limpieza.
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
@@ -152,39 +152,23 @@ ${forms.slice(0,5).map((f, i) => `Form ${i+1}: inputs=${JSON.stringify(f.inputs.
 `;
 
     // 4. CREAR SESIÓN CON SYSTEM MESSAGE
-    // Modelo GPT-4.1 por defecto. Si existe NVIDIA_API_KEY, se usa BYOK
-    // (Bring Your Own Key) contra NVIDIA NIM, una API compatible con OpenAI.
+    // El modelo por defecto es 'auto' (auto model selection), el único acceso a
+    // modelos de los planes Copilot Free/Student. Puede fijarse un id concreto
+    // con COPILOT_MODEL (p.ej. "gpt-5-mini") en planes de pago.
     const prompt = await loadPrompt();
-
-    const nvidiaApiKey = process.env.NVIDIA_API_KEY;
-    const nvidiaModel = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b';
-
-    // El runtime de Copilot envía parámetros propietarios (p.ej. "snippy") que
-    // NVIDIA rechaza con 400; enrutamos el proveedor por nuestro proxy
-    // limpiador (/api/provider-proxy), que reenvía a NVIDIA_BASE_URL.
-    const providerBaseUrl = new URL('/api/provider-proxy', process.env.APP_ORIGIN || (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : req.nextUrl.origin)).toString();
+    const model = process.env.COPILOT_MODEL || 'auto';
 
     const session = await client.createSession({
-      model: nvidiaApiKey ? nvidiaModel : 'gpt-4.1',
+      model,
       streaming: false,
       onPermissionRequest: approveAll,
       systemMessage: {
         mode: 'replace',
         content: prompt,
       },
-      ...(nvidiaApiKey
-        ? {
-            provider: {
-              type: 'openai' as const,
-              baseUrl: providerBaseUrl,
-              apiKey: nvidiaApiKey,
-              modelId: nvidiaModel,
-            },
-          }
-        : {}),
     });
     sessionId = session.sessionId;
-    console.log(`✅ Sesión creada: ${sessionId} (modelo: ${nvidiaApiKey ? nvidiaModel : 'gpt-4.1'})`);
+    console.log(`✅ Sesión creada: ${sessionId} (modelo: ${model})`);
 
     // 5. ENVIAR MENSAJE Y ESPERAR RESPUESTA
     const userPrompt = `Analyze this URL and generate the test suite. Use the CONTEXT below and produce: a short analysis, a TEST STRATEGY in markdown, 3 SMOKE TEST scenarios, and generate Page Object Model files and Playwright specs in code blocks using the exact output format defined above.\n\nCONTEXT:\n${contextSummary}\n\nPlease emit PROGRESS lines and **File:** blocks as specified in the OUTPUT FORMAT.`;
