@@ -81,21 +81,27 @@ src/
    pnpm install
    ```
 
-3. Install the GitHub Copilot CLI and the Copilot extension:
+3. Install the GitHub Copilot CLI:
    *Installing the [GitHub Copilot CLI](https://docs.github.com/en/copilot/how-tos/set-up/install-copilot-cli) is necessary to authenticate your Copilot session.*
    ```bash
-   # Install the GitHub Copilot CLI
-   npm install -g @github/copilot-cli
-
-   # Install the Copilot extension
    npm install -g @github/copilot
    ```
 
 4. Authenticate with GitHub Copilot (Mandatory):
    *An active GitHub Copilot subscription is required to use the GitHub Copilot SDK.*
    ```bash
-   copilot auth login
+   copilot login
    ```
+
+   > [!WARNING]
+   > If `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN` is set in your
+   > environment, it **takes precedence over the stored session**. A token
+   > without the `Copilot Requests` permission makes the agent fail with
+   > `401 Unauthorized`. Either grant that permission to the token, or unset
+   > the variable before running the app:
+   > ```bash
+   > env -u GH_TOKEN pnpm dev
+   > ```
 
 ### Running the Project
 

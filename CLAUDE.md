@@ -25,10 +25,12 @@ pnpm test -- -t <test-name> # Run specific test by name
 
 This application requires GitHub Copilot CLI authentication to function:
 ```bash
-npm install -g @github/copilot-cli
 npm install -g @github/copilot
-copilot auth login
+copilot login
 ```
+
+`COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` take precedence over the
+stored session. A token without the `Copilot Requests` permission fails with 401.
 
 ## Architecture
 
