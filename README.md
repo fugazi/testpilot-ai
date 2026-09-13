@@ -93,16 +93,6 @@ src/
    copilot login
    ```
 
-   > [!WARNING]
-   > If `COPILOT_GITHUB_TOKEN`, `GH_TOKEN` or `GITHUB_TOKEN` is set in your
-   > environment, it **takes precedence over the stored session**. A token
-   > without the `Copilot Requests` permission makes the agent fail with
-   > `401 Unauthorized`. Either grant that permission to the token, or unset
-   > the variable before running the app:
-   > ```bash
-   > env -u GH_TOKEN pnpm dev
-   > ```
-
 ### Running the Project
 
 ```bash

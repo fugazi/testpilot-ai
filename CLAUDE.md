@@ -29,9 +29,6 @@ npm install -g @github/copilot
 copilot login
 ```
 
-`COPILOT_GITHUB_TOKEN` / `GH_TOKEN` / `GITHUB_TOKEN` take precedence over the
-stored session. A token without the `Copilot Requests` permission fails with 401.
-
 ## Architecture
 
 ### Agent Flow (Core Pipeline)
